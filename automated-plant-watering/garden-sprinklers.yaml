@@ -1,0 +1,87 @@
+alias: Garden Sprinklers
+description: >-
+  Control sprinklers based on soil moisture with limits based on the day of the
+  week. The idea is to lightly water every other day and water heavier once
+  every two weeks.
+trigger:
+  - platform: numeric_state
+    entity_id:
+      - sensor.outdoor_weather_station_dahlia_bed_soil_moisture
+    below: 41
+    id: dahlia
+  - platform: numeric_state
+    entity_id:
+      - sensor.outdoor_weather_station_raised_bed_soil_moisture
+    below: 41
+    id: raised
+condition:
+  - condition: and
+    conditions:
+      - condition: template
+        value_template: "{{ (now().day % 2) == 0 }}"
+        alias: Test if even number date
+      - alias: Test time & precipitation odds
+        condition: or
+        conditions:
+          - condition: and
+            conditions:
+              - condition: time
+                after: "08:00:00"
+                before: "13:00:00"
+              - condition: state
+                entity_id: input_boolean.precipitation_likely_between_7_5
+                state: "off"
+            alias: Between 8am & 1pm and precipitation unlikely?
+          - condition: time
+            after: "17:30:00"
+            before: "19:30:00"
+            alias: Between 5:30pm & 7:30pm?
+action:
+  - service: telegram_bot.send_message
+    metadata: {}
+    data:
+      message: >
+        {% set entity = 'sensor.outdoor_weather_station_' ~ trigger.id ~
+        '_bed_soil_moisture' %}
+
+        Started watering the "{{trigger.id}}" bed. Its current soil moisture is
+        {{ states(entity) }}%.
+    alias: Telegram send started watering
+  - service: valve.open_valve
+    metadata: {}
+    data: {}
+    target:
+      entity_id: valve.{{trigger.id}}_bed_sprinklers
+    enabled: true
+  - if:
+      - condition: template
+        value_template: "{{ (now().weekday()) == 6 }}"
+        alias: If Sunday
+    then:
+      - delay:
+          hours: 0
+          minutes: 8
+          seconds: 0
+          milliseconds: 0
+        enabled: true
+    else:
+      - delay:
+          hours: 0
+          minutes: 2
+          seconds: 0
+          milliseconds: 0
+        enabled: true
+    alias: If Sunday water for longer
+  - service: valve.close_valve
+    metadata: {}
+    data: {}
+    target:
+      entity_id: valve.{{trigger.id}}_bed_sprinklers
+    enabled: true
+  - service: telegram_bot.send_message
+    metadata: {}
+    data:
+      message: |
+        Finished watering the "{{trigger.id}}" bed
+    alias: Telegram send finished watering
+mode: single

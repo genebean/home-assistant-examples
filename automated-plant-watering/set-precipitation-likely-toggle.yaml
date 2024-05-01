@@ -1,0 +1,23 @@
+alias: Set precipitation likely toggle
+description: ""
+trigger:
+  - platform: time
+    at: "07:01:00"
+condition: []
+action:
+  - if:
+      - condition: numeric_state
+        entity_id: sensor.chance_of_precipitation_in_next_10_hours
+        above: 50
+    then:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.precipitation_likely_between_7_5
+        data: {}
+    else:
+      - service: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.precipitation_likely_between_7_5
+        data: {}
+mode: single

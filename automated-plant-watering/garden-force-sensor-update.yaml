@@ -1,0 +1,15 @@
+alias: Garden - force sensor update
+description: ""
+trigger:
+  - platform: time
+    at: "08:00:00"
+  - platform: time
+    at: "17:30:00"
+condition: []
+action:
+  - service: homeassistant.reload_config_entry
+    target:
+      # this is my Ecowitt weather station
+      device_id: 42ae4afe9ffa3ce54781cd0c3e77acba
+    data: {}
+mode: single
